@@ -29,13 +29,27 @@ export async function transformIngestion(ingestionId: string) {
   const sourceConfig = tenantConfig[source];
 
   for (const row of ingestion.rows) {
-    const payload = row.payload as Record<string, unknown>;
+    try {
+      if (
+        row.payload === null ||
+        typeof row.payload !== "object" ||
+        Array.isArray(row.payload)
+      ) {
+        throw new Error("Raw payload must be an object");
+      }
+      const payload = row.payload as Record<string, unknown>;
 
-    const data = mapRecord(payload, sourceConfig.mappings);
+      const data = mapRecord(payload, sourceConfig.mappings);
 
-    applyTransformations(data, sourceConfig.transformations ?? {});
+      applyTransformations(data, sourceConfig.transformations ?? {});
 
-    await upsertCanonical(ingestion.tenantId, source, data);
+      await upsertCanonical(ingestion.tenantId, source, data);
+    } catch (error) {
+      throw new Error(
+        `Ingestion ${ingestion.id}, raw row ${row.id}: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
+    }
   }
 }
 
@@ -163,7 +177,7 @@ async function upsertCanonical(
           error.code === "P2003"
         ) {
           console.warn(
-            `Orphan refund skipped: ${refund.refundId} references missing order ${refund.orderId}`,
+            `Orphan refund skipped for ${tenantId}: ${refund.refundId} references missing order ${refund.orderId}`,
           );
 
           break;

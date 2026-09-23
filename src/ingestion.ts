@@ -1,49 +1,34 @@
-import prisma from "./db/prisma.js";
+﻿import prisma from "./db/prisma.js";
 import type { Manifest } from "./manifest.js";
 
-export const createIngestion = async (
+export const ingestRawData = async (
   batch: Manifest["batches"][number],
-  hash: string,
-) =>
-  await prisma.ingestion.create({
-    data: {
-      tenantId: batch.tenant,
-      sourceId: batch.source,
-      sourceHash: hash,
-    },
-  });
-
-export const ingestRawData = async (ingestionId: string, records: object[]) =>
-  await prisma.$transaction(async (tx) => {
-    await tx.rawData.createMany({
-      data: records.map((record) => ({
-        payload: record,
-        ingestionId,
-      })),
-    });
-
-    await tx.ingestion.update({
-      where: {
-        id: ingestionId,
-      },
-      data: {
-        status: "COMPLETED",
-        completedAt: new Date(),
-      },
-    });
-  });
-
-export const getIngestion = async (
-  tenantId: string,
-  sourceId: string,
   sourceHash: string,
+  records: object[],
 ) =>
-  await prisma.ingestion.findUniqueOrThrow({
-    where: {
-      tenantId_sourceId_sourceHash: {
-        tenantId,
-        sourceId,
-        sourceHash,
+  prisma.$transaction(async (tx) => {
+    const existing = await tx.ingestion.findUnique({
+      where: {
+        tenantId_sourceId_sourceHash: {
+          tenantId: batch.tenant,
+          sourceId: batch.source,
+          sourceHash,
+        },
       },
-    },
+    });
+
+    if (existing) return existing;
+
+    const ingestion = await tx.ingestion.create({
+      data: { tenantId: batch.tenant, sourceId: batch.source, sourceHash },
+    });
+
+    await tx.rawData.createMany({
+      data: records.map((payload) => ({ payload, ingestionId: ingestion.id })),
+    });
+
+    return tx.ingestion.update({
+      where: { id: ingestion.id },
+      data: { status: "COMPLETED", completedAt: new Date() },
+    });
   });

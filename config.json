@@ -32,6 +32,9 @@
         "platform": "platform",
         "spend": "spend",
         "cost_usd": "spend"
+      },
+      "transformations": {
+        "platform": "uppercase"
       }
     },
     "refunds": {
@@ -77,6 +80,9 @@
         "platform": "platform",
         "spend": "spend",
         "cost_usd": "spend"
+      },
+      "transformations": {
+        "platform": "uppercase"
       }
     },
     "refunds": {

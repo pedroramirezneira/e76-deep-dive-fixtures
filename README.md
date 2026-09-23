@@ -1,18 +1,34 @@
-# Deep dive fixtures
+﻿# Multi-tenant ingestion
 
-Four sources for two tenants, delivered the way exports actually land: a
-sequence of batch files per source, one format per source.
+TypeScript + PostgreSQL + Prisma pipeline for orders, email events, ad spend and refunds from Northwind and Lumen.
 
-- `orders/`        CSV, one row per order
-- `email_events/`  NDJSON, one JSON object per line
-- `ad_spend/`      CSV, daily spend per campaign
-- `refunds/`       CSV, one row per refund
+Files -> raw storage -> config-based mapping and validation -> canonical tables.
 
-`manifest.json` lists every batch the set is supposed to contain, with the
-window each one covers. `<tenant>/finance_summary.csv` is what the client
-reports they earned, by day.
+## Run
 
-These fixtures contain the failures described in the brief. They are there
-on purpose and they are not all obvious. Some of what you find cannot be
-solved from the data at all; the brief says what to do about those. Reading
-all of it before you start building is time well spent.
+Requires Node.js 24.11+, npm and Docker, or an existing PostgreSQL database. Run from the repository root:
+
+```sh
+npm install
+cp .env.example .env
+
+docker compose up -d
+npm start
+```
+
+For an existing database, skip Docker and set `DATABASE_URL` in `.env`.
+
+`npm start` generates Prisma Client, compiles, applies migrations and runs the pipeline. Docker is started separately. Run the same command again to repeat ingestion and canonicalization.
+
+## Behavior
+
+- SHA-256 identifies repeated files per tenant and source; canonical upserts deduplicate business records.
+- Raw ingestion is transactional. Canonical failures preserve raw and do not stop later batches.
+- Missing files are reported in the CLI and skipped.
+- Refunds without an order remain in raw, are reported and are skipped in canonical storage.
+
+## Add a tenant
+
+Add its batches to `manifest.json` and its column mappings and transformations to `config.json`. List orders before refunds. Existing source formats require no tenant-specific code.
+
+The CLI is basic and there are no automated tests. See [TRADEOFFS.md](TRADEOFFS.md) for decisions and unfinished work.
