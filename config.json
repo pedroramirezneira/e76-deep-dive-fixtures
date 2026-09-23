@@ -1,0 +1,92 @@
+{
+  "northwind": {
+    "orders": {
+      "mappings": {
+        "order_id": "orderId",
+        "created_at": "orderCreatedAt",
+        "channel": "channel",
+        "gross": "gross",
+        "currency": "currency",
+        "customer_email": "customerEmail"
+      },
+      "transformations": {
+        "channel": "uppercase"
+      }
+    },
+    "email_events": {
+      "mappings": {
+        "event_id": "eventId",
+        "type": "type",
+        "email": "email",
+        "campaign_id": "campaignId",
+        "occurred_at": "occurredAt"
+      },
+      "transformations": {
+        "type": "uppercase"
+      }
+    },
+    "ad_spend": {
+      "mappings": {
+        "date": "date",
+        "campaign_id": "campaignId",
+        "platform": "platform",
+        "spend": "spend",
+        "cost_usd": "spend"
+      }
+    },
+    "refunds": {
+      "mappings": {
+        "refund_id": "refundId",
+        "refunded_at": "refundedAt",
+        "order_id": "orderId",
+        "amount": "amount",
+        "currency": "currency"
+      }
+    }
+  },
+  "lumen": {
+    "orders": {
+      "mappings": {
+        "order_id": "orderId",
+        "created_at": "orderCreatedAt",
+        "channel": "channel",
+        "gross": "gross",
+        "currency": "currency",
+        "customer_email": "customerEmail"
+      },
+      "transformations": {
+        "channel": "uppercase"
+      }
+    },
+    "email_events": {
+      "mappings": {
+        "event_id": "eventId",
+        "type": "type",
+        "email": "email",
+        "campaign_id": "campaignId",
+        "occurred_at": "occurredAt"
+      },
+      "transformations": {
+        "type": "uppercase"
+      }
+    },
+    "ad_spend": {
+      "mappings": {
+        "date": "date",
+        "campaign_id": "campaignId",
+        "platform": "platform",
+        "spend": "spend",
+        "cost_usd": "spend"
+      }
+    },
+    "refunds": {
+      "mappings": {
+        "refund_id": "refundId",
+        "refunded_at": "refundedAt",
+        "order_id": "orderId",
+        "amount": "amount",
+        "currency": "currency"
+      }
+    }
+  }
+}

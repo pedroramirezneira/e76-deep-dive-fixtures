@@ -32,3 +32,18 @@ export const ingestRawData = async (ingestionId: string, records: object[]) =>
       },
     });
   });
+
+export const getIngestion = async (
+  tenantId: string,
+  sourceId: string,
+  sourceHash: string,
+) =>
+  await prisma.ingestion.findUniqueOrThrow({
+    where: {
+      tenantId_sourceId_sourceHash: {
+        tenantId,
+        sourceId,
+        sourceHash,
+      },
+    },
+  });

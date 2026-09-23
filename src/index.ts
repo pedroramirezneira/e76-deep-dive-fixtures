@@ -5,19 +5,24 @@ import { createHash } from "crypto";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import { csvParse } from "./csv-parse.js";
 import { ndjsonParse } from "./ndjson-parse.js";
-import { createIngestion, ingestRawData } from "./ingestion.js";
+import { createIngestion, getIngestion, ingestRawData } from "./ingestion.js";
+import manifest from "../manifest.json" with { type: "json" };
+import config from "../config.json" with { type: "json" };
+import { configSchema } from "./config.js";
+import { transformIngestion } from "./transform.js";
 
-const MANIFEST_PATH = "./manifest.json";
+const manifestParsed = manifestSchema.safeParse(manifest);
+const configParsed = configSchema.safeParse(config);
 
-const file = readFileSync(MANIFEST_PATH, "utf-8");
-const json = JSON.parse(file);
-const parsed = manifestSchema.safeParse(json);
-
-if (parsed.error) {
-  throw new Error("Invalid manifest");
+if (manifestParsed.error) {
+  throw new Error(`Invalid manifest: ${manifestParsed.error}`);
 }
 
-for (const batch of parsed.data.batches) {
+if (configParsed.error) {
+  throw new Error(`Invalid config: ${configParsed.error}`);
+}
+
+for (const batch of manifestParsed.data.batches) {
   try {
     const file = readFileSync(path.join("./", batch.path));
     const sourceHash = createHash("sha256").update(file).digest("hex");
@@ -36,19 +41,26 @@ for (const batch of parsed.data.batches) {
       }
     }
 
-    const ingestion = await createIngestion(batch, sourceHash);
-    await ingestRawData(ingestion.id, records);
+    let ingestion;
+    try {
+      ingestion = await createIngestion(batch, sourceHash);
+      await ingestRawData(ingestion.id, records);
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        ingestion = await getIngestion(batch.tenant, batch.source, sourceHash);
+      } else {
+        throw error;
+      }
+    }
+    await transformIngestion(ingestion.id);
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       console.error(
         `Missing file for ${batch.tenant}/${batch.source}: ${batch.path}`,
       );
-      continue;
-    }
-    if (
-      error instanceof PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
       continue;
     }
     throw error;
