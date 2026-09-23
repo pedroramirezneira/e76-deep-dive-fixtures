@@ -11,3 +11,103 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum IngestionStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Ingestion {
+  id         String          @id @default(cuid())
+  tenantId   String
+  sourceId   String
+  sourceHash String
+  status     IngestionStatus @default(PROCESSING)
+  error      String?
+
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+
+  rows RawData[]
+
+  @@unique([tenantId, sourceId, sourceHash])
+  @@index([tenantId, sourceId])
+}
+
+model RawData {
+  id      String @id @default(cuid())
+  payload Json
+
+  ingestion   Ingestion @relation(fields: [ingestionId], references: [id])
+  ingestionId String
+
+  @@index([ingestionId])
+}
+
+model Order {
+  id             String   @id @default(cuid())
+  tenantId       String
+  orderId        String
+  orderCreatedAt DateTime @db.Timestamptz(3)
+  channel        String
+  gross          Decimal  @db.Decimal(12, 2)
+  currency       String
+  customerEmail  String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  refunds Refund[]
+
+  @@unique([tenantId, orderId])
+}
+
+enum EmailEventType {
+  OPEN
+  CLICK
+  DELIVERED
+  UNSUBSCRIBE
+}
+
+model EmailEvent {
+  id         String         @id @default(cuid())
+  tenantId   String
+  eventId    String
+  type       EmailEventType
+  email      String
+  campaignId String
+  occurredAt DateTime       @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([tenantId, eventId])
+  @@index([tenantId, occurredAt])
+}
+
+model AdSpend {
+  id         String   @id @default(cuid())
+  tenantId   String
+  date       DateTime @db.Date
+  campaignId String
+  platform   String
+  spend      Decimal  @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([tenantId, date, campaignId])
+}
+
+model Refund {
+  id         String   @id @default(cuid())
+  tenantId   String
+  refundId   String
+  refundedAt DateTime @db.Timestamptz(3)
+  orderId    String
+  amount     Decimal  @db.Decimal(12, 2)
+  currency   String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  order     Order    @relation(fields: [tenantId, orderId], references: [tenantId, orderId])
+
+  @@unique([tenantId, refundId])
+}
